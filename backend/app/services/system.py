@@ -7,6 +7,7 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 from app.core.config import settings
+from app.services.executables import resolve_executable
 
 
 def whisper_runtime() -> tuple[str, str, bool]:
@@ -35,10 +36,8 @@ def ollama_models() -> tuple[bool, set[str], str]:
 
 def system_check(selected_model: str | None = None) -> dict:
     model = selected_model or settings.default_ollama_model
-    ffmpeg_available = shutil.which("ffmpeg") is not None
-    deepfilternet_available = (
-        importlib.util.find_spec("df") is not None or shutil.which("deepFilter") is not None
-    )
+    ffmpeg_available = resolve_executable("ffmpeg", "FFMPEG_PATH") is not None
+    deepfilternet_available = importlib.util.find_spec("df") is not None or resolve_executable("deepFilter") is not None
     ollama_available, models, ollama_message = ollama_models()
     device, compute_type, cuda = whisper_runtime()
     disk = shutil.disk_usage(settings.data_dir if settings.data_dir.exists() else settings.project_root)

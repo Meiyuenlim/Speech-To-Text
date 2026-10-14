@@ -104,6 +104,7 @@ The tests mock faster-whisper, DeepFilterNet, and Ollama boundaries. They do not
 ## Troubleshooting
 
 - **FFmpeg not found:** install FFmpeg, add its `bin` directory to PATH, restart the shell, then retry.
+- **Windows FFmpeg PATH still not visible:** set `FFMPEG_PATH` and `FFPROBE_PATH` to the full executable paths in `.env`, then restart the backend.
 - **Ollama unavailable:** start Ollama and check `http://localhost:11434/api/tags`; the UI will show the exact `ollama pull qwen3:8b` command when the model is missing.
 - **CUDA unavailable:** the app automatically uses CPU/INT8. Install a compatible NVIDIA driver, CUDA runtime, and PyTorch build if GPU acceleration is desired.
 - **CUDA out of memory:** choose `small` or `medium`, close other GPU applications, or run with CPU/INT8.

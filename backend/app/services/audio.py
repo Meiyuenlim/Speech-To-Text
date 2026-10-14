@@ -5,6 +5,8 @@ import subprocess
 import re
 from pathlib import Path
 
+from app.services.executables import resolve_executable
+
 
 class AudioProcessingError(RuntimeError):
     pass
@@ -13,7 +15,7 @@ class AudioProcessingError(RuntimeError):
 class AudioPipeline:
     def duration_seconds(self, source: Path) -> float | None:
         """Return duration when ffprobe is available; an unavailable probe is non-fatal."""
-        probe = shutil.which("ffprobe")
+        probe = resolve_executable("ffprobe", "FFPROBE_PATH")
         if not probe:
             return None
         result = subprocess.run(
@@ -28,7 +30,7 @@ class AudioPipeline:
         return float(match.group(0)) if match else None
 
     def convert_to_wav(self, source: Path, destination: Path, sample_rate: int) -> Path:
-        ffmpeg_executable = shutil.which("ffmpeg")
+        ffmpeg_executable = resolve_executable("ffmpeg", "FFMPEG_PATH")
         if ffmpeg_executable is None:
             raise AudioProcessingError("FFmpeg was not found. Install FFmpeg and add it to PATH.")
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -55,7 +57,7 @@ class AudioPipeline:
         return destination
 
     def enhance_with_deepfilter(self, source: Path, destination: Path) -> Path:
-        executable = shutil.which("deepFilter")
+        executable = resolve_executable("deepFilter")
         if not executable:
             raise AudioProcessingError("DeepFilterNet is not installed")
         destination.parent.mkdir(parents=True, exist_ok=True)
