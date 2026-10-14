@@ -28,11 +28,12 @@ class AudioPipeline:
         return float(match.group(0)) if match else None
 
     def convert_to_wav(self, source: Path, destination: Path, sample_rate: int) -> Path:
-        if shutil.which("ffmpeg") is None:
+        ffmpeg_executable = shutil.which("ffmpeg")
+        if ffmpeg_executable is None:
             raise AudioProcessingError("FFmpeg was not found. Install FFmpeg and add it to PATH.")
         destination.parent.mkdir(parents=True, exist_ok=True)
         command = [
-            "ffmpeg",
+            ffmpeg_executable,
             "-hide_banner",
             "-loglevel",
             "error",
