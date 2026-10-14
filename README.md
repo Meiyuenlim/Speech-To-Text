@@ -14,6 +14,7 @@ No OpenAI, Azure OpenAI, Bedrock, paid API, telemetry, or cloud AI service is us
 - faster-whisper integration with automatic CUDA/CPU selection, VAD, word timestamps, glossary prompt, and review flags
 - Two-stage Ollama generation: timestamped evidence extraction, then structured final minutes using Pydantic JSON schemas
 - Editable transcript and minutes, audio comparison, approval, and DOCX/TXT/JSON export
+- Continuous transcript reading view with search highlighting and a single document editor
 - Backend and frontend tests that mock local AI providers and never download models
 
 ## Requirements
@@ -74,6 +75,12 @@ Copy `.env.example` to `.env` or set variables in the shell. Important settings 
 | `MAX_RECORDING_MINUTES` | `240` | Reserved recording duration setting |
 
 Do not commit `data/`, model files, uploaded audio, transcripts, or Ollama data. The included `.gitignore` protects these paths.
+
+## Reviewing a transcript
+
+Open a meeting's review page to read the transcript as one continuous document. Search highlights matching text without hiding the rest of the conversation; use **Previous match** and **Next match** to move between results. Choose **Edit transcript** to make corrections in one text box, then **Save corrections**. Switching review tabs preserves unsaved corrections while the page stays open.
+
+Existing recordings work with this view without retranscription. Corrections retain the timestamps of unaffected text; edits spanning original segment boundaries use the combined audio range. Save corrections before selecting **Regenerate minutes**, which uses the saved transcript.
 
 ## API
 
