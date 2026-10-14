@@ -82,6 +82,8 @@ Open a meeting's review page to read the transcript as one continuous document. 
 
 Existing recordings work with this view without retranscription. Corrections retain the timestamps of unaffected text; edits spanning original segment boundaries use the combined audio range. Save corrections before selecting **Regenerate minutes**, which uses the saved transcript.
 
+TXT, DOCX, and JSON exports contain the saved transcript as continuous paragraphs without a timestamp on every segment. Save any corrections before exporting. JSON exports now use a string for `transcript` instead of a segment array. The transcript API and database retain their timestamped segments, and meeting minutes keep their evidence references.
+
 ## API
 
 The backend exposes the requested `/api/meetings` CRUD/process/review/export routes plus:

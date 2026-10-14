@@ -1,17 +1,39 @@
 from __future__ import annotations
 
-import json
+import re
 from datetime import datetime, timezone
 from io import BytesIO
 
 from docx import Document
-from docx.enum.text import WD_BREAK
-from docx.shared import Inches
 
 from app.models.meeting import Meeting
 from app.schemas.meeting import MinutesDocument
 from app.services.markdown import to_markdown
 from app.services.transcription import format_timestamp
+
+
+def full_transcript_text(meeting: Meeting) -> str:
+    """Format the saved transcript like the continuous document in the review UI."""
+    parts: list[str] = []
+    previous = None
+    paragraph_length = 0
+    for segment in meeting.transcript_segments:
+        separator = ""
+        same_range = previous is not None and (
+            previous.start_time == segment.start_time and previous.end_time == segment.end_time
+        )
+        if previous is not None and not same_range and not (
+            re.search(r"\s$", previous.text) or re.match(r"\s", segment.text)
+        ):
+            paragraph_break = segment.start_time - previous.end_time >= 3 or (
+                paragraph_length >= 400 and re.search(r'''[.!?。！？]["'”’）)]*$''', previous.text)
+            )
+            separator = "\n\n" if paragraph_break else " "
+        text = separator + segment.text
+        parts.append(text)
+        paragraph_length = len(text.rsplit("\n\n", 1)[-1]) if "\n\n" in text else paragraph_length + len(text)
+        previous = segment
+    return "".join(parts)
 
 
 def export_payload(meeting: Meeting, minutes: MinutesDocument | None) -> dict:
@@ -29,18 +51,7 @@ def export_payload(meeting: Meeting, minutes: MinutesDocument | None) -> dict:
             "status": meeting.status,
             "created_at": meeting.created_at.isoformat() if meeting.created_at else None,
         },
-        "transcript": [
-            {
-                "id": item.id,
-                "sequence": item.sequence,
-                "start_time": item.start_time,
-                "end_time": item.end_time,
-                "text": item.text,
-                "confidence": item.confidence,
-                "needs_review": item.needs_review,
-            }
-            for item in meeting.transcript_segments
-        ],
+        "transcript": full_transcript_text(meeting),
         "minutes": minutes.model_dump(mode="json") if minutes else None,
         "exported_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -48,12 +59,7 @@ def export_payload(meeting: Meeting, minutes: MinutesDocument | None) -> dict:
 
 def export_txt(meeting: Meeting, minutes: MinutesDocument | None) -> str:
     body = to_markdown(minutes) if minutes else f"# {meeting.title}\n\nMinutes have not been generated.\n"
-    transcript = ["\n## Transcript\n"]
-    transcript.extend(
-        f"[{format_timestamp(segment.start_time)} - {format_timestamp(segment.end_time)}] {segment.text}"
-        for segment in meeting.transcript_segments
-    )
-    return body + "\n" + "\n".join(transcript) + "\n"
+    return body + "\n\n## Transcript\n\n" + full_transcript_text(meeting) + "\n"
 
 
 def export_docx(meeting: Meeting, minutes: MinutesDocument | None) -> bytes:
@@ -94,10 +100,10 @@ def export_docx(meeting: Meeting, minutes: MinutesDocument | None) -> bytes:
             for warning in minutes.generation_warnings:
                 document.add_paragraph(warning, style="List Bullet")
     document.add_heading("Transcript", level=1)
-    for segment in meeting.transcript_segments:
-        document.add_paragraph(
-            f"[{format_timestamp(segment.start_time)} - {format_timestamp(segment.end_time)}] {segment.text}"
-        )
+    transcript = full_transcript_text(meeting)
+    if transcript:
+        for paragraph in transcript.split("\n\n"):
+            document.add_paragraph(paragraph)
     buffer = BytesIO()
     document.save(buffer)
     return buffer.getvalue()
