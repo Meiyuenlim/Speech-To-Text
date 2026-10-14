@@ -44,7 +44,7 @@ def test_transcription_retries_without_vad_when_first_pass_is_empty(tmp_path) ->
         def transcribe(self, path, **kwargs):
             calls.append(kwargs["vad_filter"])
             info = SimpleNamespace(language="en")
-            if kwargs["vad_filter"]:
+            if len(calls) == 1:
                 return iter(()), info
             segment = SimpleNamespace(
                 text="hello world",
@@ -63,7 +63,7 @@ def test_transcription_retries_without_vad_when_first_pass_is_empty(tmp_path) ->
                 audio, "small", "auto"
             )
 
-    assert calls == [True, False]
+    assert calls == [False, False]
     assert rows[0]["text"] == "hello world"
     assert language == "en"
     assert (device, compute_type) == ("cpu", "int8")

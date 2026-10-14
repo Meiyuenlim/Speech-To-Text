@@ -45,7 +45,9 @@ class TranscriptionService:
         model = WhisperModel(model_name, device=device, compute_type=compute_type)
         kwargs = {
             "beam_size": 5,
-            "vad_filter": True,
+            # Keep this aligned with the verified local Whisper command. Some
+            # recordings are valid but are discarded entirely by Silero VAD.
+            "vad_filter": False,
             "word_timestamps": True,
             "task": "transcribe",
         }
@@ -56,9 +58,8 @@ class TranscriptionService:
         segments, info = model.transcribe(str(audio_path), **kwargs)
         rows = self._rows_from_segments(segments, progress)
 
-        # VAD can discard all speech in quiet recordings or recordings with
-        # unusual background noise. Retry without it before reporting an empty
-        # transcript, so a valid recording is not treated as a hard failure.
+        # Keep a second no-VAD attempt in case a backend/model returns an empty
+        # lazy iterator on its first call.
         if not rows:
             fallback_kwargs = {**kwargs, "vad_filter": False}
             segments, info = model.transcribe(str(audio_path), **fallback_kwargs)
