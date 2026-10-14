@@ -178,6 +178,10 @@ class ProcessingManager:
                 )
             )
         db.commit()
+        # The deletion loop loaded this relationship before inserting the new
+        # rows by foreign key. With expire_on_commit=False it still contains the
+        # old (often empty) list. Reload it before generating minutes.
+        db.expire(meeting, ["transcript_segments"])
         self._check_cancelled(meeting.id)
         self._generate_minutes(db, meeting)
 
