@@ -54,9 +54,26 @@ class TranscriptionService:
         if glossary:
             kwargs["initial_prompt"] = glossary
         segments, info = model.transcribe(str(audio_path), **kwargs)
+        rows = self._rows_from_segments(segments, progress)
+
+        # VAD can discard all speech in quiet recordings or recordings with
+        # unusual background noise. Retry without it before reporting an empty
+        # transcript, so a valid recording is not treated as a hard failure.
+        if not rows:
+            fallback_kwargs = {**kwargs, "vad_filter": False}
+            segments, info = model.transcribe(str(audio_path), **fallback_kwargs)
+            rows = self._rows_from_segments(segments, progress)
+        detected_language = getattr(info, "language", None)
+        return rows, detected_language, device, compute_type
+
+    @staticmethod
+    def _rows_from_segments(
+        segments: Iterator[object],
+        progress: Callable[[int], None] | None = None,
+    ) -> list[dict]:
         rows: list[dict] = []
         for index, segment in enumerate(segments):
-            text = (segment.text or "").strip()
+            text = (getattr(segment, "text", "") or "").strip()
             if not text:
                 continue
             confidence = _confidence(getattr(segment, "avg_logprob", None))
@@ -74,8 +91,7 @@ class TranscriptionService:
             )
             if progress:
                 progress(min(75, 45 + len(rows) // 5))
-        detected_language = getattr(info, "language", None)
-        return rows, detected_language, device, compute_type
+        return rows
 
 
 def transcript_text(segments: list[dict]) -> str:
